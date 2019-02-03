@@ -13,6 +13,9 @@ module.exports = {
 			path: "/api",
 			aliases: {
 				"GET contact/:id": "contact.get",
+				"PUT contact/:id": "contact.update",
+				"POST contact/:id": "contact.create",
+				"DELETE contact/:id": "contact.remove",
 				"REST contact": "contact"
 			},
 			bodyParsers: {

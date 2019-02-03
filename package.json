@@ -1,0 +1,43 @@
+{
+  "name": "moleculer-demo",
+  "version": "1.0.0",
+  "description": "My Moleculer microservices project",
+  "scripts": {
+    "dev": "moleculer-runner --repl --hot services",
+    "start": "moleculer-runner",
+    "cli": "moleculer connect ",
+    "ci": "jest --watch",
+    "test": "jest --coverage",
+    "lint": "eslint services"
+  },
+  "keywords": [
+    "microservices",
+    "moleculer"
+  ],
+  "author": "",
+  "devDependencies": {
+    "eslint": "^5.10.0",
+    "jest": "^23.6.0",
+    "jest-cli": "^23.6.0",
+    "moleculer-repl": "^0.5.3"
+  },
+  "dependencies": {
+    "ioredis": "^4.6.2",
+    "lru-cache": "^5.1.1",
+    "moleculer": "^0.13.0",
+    "moleculer-console-tracer": "~0.2.0",
+    "moleculer-web": "^0.8.0",
+    "uuid": "^3.3.2"
+  },
+  "engines": {
+    "node": ">= 8.x.x"
+  },
+  "jest": {
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node",
+    "rootDir": "./services",
+    "roots": [
+      "../test"
+    ]
+  }
+}

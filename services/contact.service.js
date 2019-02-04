@@ -1,8 +1,9 @@
 "use strict";
+const Redis = require('ioredis');
 const uuidv4 = require('uuid/v4');
 
 module.exports = {
-	name: "greeter",
+	name: "contact",
 
 	/**
 	 * Service settings
@@ -26,10 +27,10 @@ module.exports = {
 				id: {				// Q: А вообще, нужен ли id? он же в url, a не как params
 					type: "string",
 					empty: false
-				},
-				async handler(ctx) {
-					return await this.redis.get(String(ctx.params.id));
 				}
+			},
+			async handler(ctx) {
+				return await this.redis.get(String(ctx.params.id));
 			}
 		},// END OF GET ACTION
 
@@ -123,11 +124,11 @@ module.exports = {
 				id: {
 					type: "string",
 					empty: false
-				},
+				}
+			},
 				async handler(ctx) {
 					await this.redis.del(String(ctx.params.id));
 				}
-			}
 		} // END OF REMOVE ACTION
 
 	},
@@ -182,7 +183,6 @@ module.exports = {
 	async created() {
 		this.redis = await new Redis();
 	},
-
 	/**
 	 * Service started lifecycle event handler
 	 */

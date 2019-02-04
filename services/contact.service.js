@@ -24,13 +24,13 @@ module.exports = {
 
 		get: {
 			params: {
-				id: {				// Q: А вообще, нужен ли id? он же в url, a не как params
+				id: {				
 					type: "string",
 					empty: false
 				}
 			},
-			async handler(ctx) {
-				return await this.redis.get(String(ctx.params.id));
+			 handler(ctx) {
+				return  this.redis.get(String(ctx.params.id));
 			}
 		},// END OF GET ACTION
 
@@ -71,14 +71,16 @@ module.exports = {
 						},
 						address: {
 							type: "string",
-							empty: true		 // Q: Если empty то не обязательно он должен быть пустым?
+							empty: true		
 						}
 					}
 				}
 			},
 			handler(ctx) {
+				console.log(Object.values(ctx.params));
 				const { id, fullName, email, phone, wallets } = ctx.params;
-				this.broker.emit("contact.create", [id, fullName, email, phone, wallets]);
+				return this.broker.emit("contact.create", [id, fullName, email, phone, wallets]);
+				//return this.broker.emit("contact.create", [...ctx.params]);
 			}
 		}, // END OF CREATE ACTION
 
@@ -115,7 +117,7 @@ module.exports = {
 				user.phone = phone;
 				user.title = walletsTitle;
 
-				return await this.redis.set(String(ctx.params.id), user);
+				return this.redis.set(String(ctx.params.id), user);
 			}
 		}, // END OF UPDATE ACTION
 
@@ -126,9 +128,9 @@ module.exports = {
 					empty: false
 				}
 			},
-				async handler(ctx) {
-					await this.redis.del(String(ctx.params.id));
-				}
+			async handler(ctx) {
+				return this.redis.del(String(ctx.params.id));
+			}
 		} // END OF REMOVE ACTION
 
 	},
@@ -156,12 +158,12 @@ module.exports = {
 
 			for (let i = 0; wallets.length > i; i++) {
 
-				switch (wallet[i].currency) {
+				switch (wallets[i].currency) {
 					case "BTC":
-						wallet[i].address = "BTC_" + uuidv4();
+						wallets[i].address = "BTC_" + uuidv4();
 						break;
 					case "XRP":
-						wallet[i].address = "XRP_" + uuidv4();
+						wallets[i].address = "XRP_" + uuidv4();
 						break;
 					default:
 				}

@@ -30,15 +30,15 @@ module.exports = {
 				}
 			},
 			 handler(ctx) {
-				return  this.redis.get(String(ctx.params.id));
+				return  this.redis.get(ctx.params.id);
 			}
 		},// END OF GET ACTION
 
 		create: {
 			params: {
-				id: [{
+			/*	id: [{
 					type: "string",
-					empty: false
+					empty: екгу
 				},
 				{
 					type: "number",
@@ -46,7 +46,7 @@ module.exports = {
 					convert: true,
 					positive: true,
 					empty: false
-				}],
+				}],*/
 				fullName: {
 					type: "string",
 					empty: false
@@ -78,7 +78,8 @@ module.exports = {
 			},
 			handler(ctx) {
 				console.log(Object.values(ctx.params));
-				const { id, fullName, email, phone, wallets } = ctx.params;
+				const { fullName, email, phone, wallets } = ctx.params;
+				const id = fullName.split('')[0] +'_'+ uuidv4();
 				return this.broker.emit("contact.create", [id, fullName, email, phone, wallets]);
 				//return this.broker.emit("contact.create", [...ctx.params]);
 			}
@@ -108,16 +109,27 @@ module.exports = {
 				}
 			},
 			async handler(ctx) {
-				let { id, fullName, email, phone, wallets } = ctx.params;
+				let { id, fullName, email, phone, walletsTitle } = ctx.params;
 				let user = await this.redis.get(String(ctx.params.id));
 				// Q: Если всё сеттить через user = {} то перезапишет address
-				user.fullName = fullName;
+				/*
+				user.fullName = String(fullName);
 				user.email = email;
 				user.fullName = fullName;
 				user.phone = phone;
-				user.title = walletsTitle;
-
-				return this.redis.set(String(ctx.params.id), user);
+				user.title = walletsTitle;	
+				*/
+				
+				user = {
+					...user,
+					email: email,
+					fullName: fullName,
+					phone: phone,
+					title: walletsTitle
+				}
+				
+				
+				return this.redis.set(String(ctx.params.id), JSON.stringify(user));
 			}
 		}, // END OF UPDATE ACTION
 
@@ -131,8 +143,12 @@ module.exports = {
 			async handler(ctx) {
 				return this.redis.del(String(ctx.params.id));
 			}
-		} // END OF REMOVE ACTION
+		}, // END OF REMOVE ACTION
 
+		async list(){
+			let sortedList = await this.redis.keys('*');			
+			return sortedList.sort();
+		}
 	},
 
 	/**

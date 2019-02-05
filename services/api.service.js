@@ -12,6 +12,8 @@ module.exports = {
 		routes: [{
 			path: "/api",
 			aliases: {
+				"POST vote/vote": "vote.vote",
+				"REST vote": "vote",
 				"REST contact": "contact"
 			},
 			bodyParsers: {

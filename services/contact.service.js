@@ -1,16 +1,20 @@
 "use strict";
-const Redis = require('ioredis');
+//const Redis = require('ioredis');
+//const client = Redis.createClient();
+const DbService = require("moleculer-db");
+const RethinkDBAdapter = require("moleculer-db-adapter-rethinkdb");
+let r = require("rethinkdb");
 const uuidv4 = require('uuid/v4');
-const client = Redis.createClient();
 
 module.exports = {
 	name: "contact",
 
-	/**
-	 * Service settings
-	 */
+	mixins: [DbService],
+	adapter: new RethinkDBAdapter(),
+	database: "posts",
+	table: "posts",
 	settings: {
-
+		fields: ["id", "name"]
 	},
 
 	/**
@@ -27,27 +31,18 @@ module.exports = {
 			params: {
 				id: {
 					type: "string",
-					empty: false
+					pattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 				}
 			},
 			handler(ctx) {
-				return this.redis.get(ctx.params.id);
+				const {id} = ctx.params;
+				return this.Promise.resolve(id)
+					.then(contact => this.adapter.findById(String(id)))
 			}
 		},// END OF GET ACTION
 
 		create: {
 			params: {
-				/*	id: [{
-						type: "string",
-						empty: екгу
-					},
-					{
-						type: "number",
-						integer: true,
-						convert: true,
-						positive: true,
-						empty: false
-					}],*/
 				fullName: {
 					type: "string",
 					empty: false
@@ -78,11 +73,9 @@ module.exports = {
 				}
 			},
 			handler(ctx) {
-				console.log(Object.values(ctx.params));
 				const { fullName, email, phone, wallets } = ctx.params;
 				const id = 'contact_' + uuidv4();
 				return this.broker.emit("contact.create", [id, fullName, email, phone, wallets]);
-				//return this.broker.emit("contact.create", [...ctx.params]);
 			}
 		}, // END OF CREATE ACTION
 
@@ -111,15 +104,10 @@ module.exports = {
 			},
 			async handler(ctx) {
 				let { id, fullName, email, phone, walletsTitle } = ctx.params;
-				let user = JSON.parse(await this.redis.get(String(ctx.params.id)));
-				// Q: Если всё сеттить через user = {} то перезапишет address
-				/*
-				user.fullName = String(fullName);
-				user.email = email;
-				user.fullName = fullName;
-				user.phone = phone;
-				user.title = walletsTitle;	
-				*/
+				let user = JSON.parse(
+				this.Promise.resolve(id)
+					.then(contact => this.adapter.findById(String(id)))
+				);
 
 				user = {
 					...user,
@@ -129,8 +117,8 @@ module.exports = {
 					title: walletsTitle
 				}
 
-
-				return this.redis.set(String(ctx.params.id), JSON.stringify(user));
+				return this.Promise.resolve(id)
+					.then(contact => this.adapter.updateById(String(id), user))
 			}
 		}, // END OF UPDATE ACTION
 
@@ -142,7 +130,9 @@ module.exports = {
 				}
 			},
 			async handler(ctx) {
-				return this.redis.del(String(ctx.params.id));
+				const { id } = ctx.params; 
+				return this.Promise.resolve(id)
+					.then(contact => this.adapter.removeById(String(id)))
 			}
 		}, // END OF REMOVE ACTION
 
@@ -165,17 +155,14 @@ module.exports = {
 		"contact.create"([id, fullName, email, phone, wallets]) {
 
 			wallets.address = this.broker.emit("wallet.create", wallets);
-
 			const newContact = {
 				fullName: fullName,
 				email: email,
 				phone: phone,
 				wallets: wallets
 			}
-
-			this.redis.set(String(id), JSON.stringify(newContact));
-
-			// console.log(JSON.stringify(newContact));
+			return this.Promise.resolve(newContact)
+				.then(contact => this.adapter.insert(newContact))
 		},
 		"wallet.create"(wallets) {
 
@@ -206,7 +193,7 @@ module.exports = {
 	 * Service created lifecycle event handler
 	 */
 	async created() {
-		this.redis = await new Redis();
+		//this.redis = await new Redis();
 	},
 	/**
 	 * Service started lifecycle event handler

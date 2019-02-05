@@ -1,6 +1,7 @@
 "use strict";
 const Redis = require('ioredis');
 const uuidv4 = require('uuid/v4');
+const client = Redis.createClient();
 
 module.exports = {
 	name: "contact",
@@ -24,29 +25,29 @@ module.exports = {
 
 		get: {
 			params: {
-				id: {				
+				id: {
 					type: "string",
 					empty: false
 				}
 			},
-			 handler(ctx) {
-				return  this.redis.get(ctx.params.id);
+			handler(ctx) {
+				return this.redis.get(ctx.params.id);
 			}
 		},// END OF GET ACTION
 
 		create: {
 			params: {
-			/*	id: [{
-					type: "string",
-					empty: екгу
-				},
-				{
-					type: "number",
-					integer: true,
-					convert: true,
-					positive: true,
-					empty: false
-				}],*/
+				/*	id: [{
+						type: "string",
+						empty: екгу
+					},
+					{
+						type: "number",
+						integer: true,
+						convert: true,
+						positive: true,
+						empty: false
+					}],*/
 				fullName: {
 					type: "string",
 					empty: false
@@ -71,7 +72,7 @@ module.exports = {
 						},
 						address: {
 							type: "string",
-							empty: true		
+							empty: true
 						}
 					}
 				}
@@ -79,7 +80,7 @@ module.exports = {
 			handler(ctx) {
 				console.log(Object.values(ctx.params));
 				const { fullName, email, phone, wallets } = ctx.params;
-				const id = fullName.split('')[0] +'_'+ uuidv4();
+				const id = 'contact_' + uuidv4();
 				return this.broker.emit("contact.create", [id, fullName, email, phone, wallets]);
 				//return this.broker.emit("contact.create", [...ctx.params]);
 			}
@@ -110,7 +111,7 @@ module.exports = {
 			},
 			async handler(ctx) {
 				let { id, fullName, email, phone, walletsTitle } = ctx.params;
-				let user = await this.redis.get(String(ctx.params.id));
+				let user = JSON.parse(await this.redis.get(String(ctx.params.id)));
 				// Q: Если всё сеттить через user = {} то перезапишет address
 				/*
 				user.fullName = String(fullName);
@@ -119,7 +120,7 @@ module.exports = {
 				user.phone = phone;
 				user.title = walletsTitle;	
 				*/
-				
+
 				user = {
 					...user,
 					email: email,
@@ -127,8 +128,8 @@ module.exports = {
 					phone: phone,
 					title: walletsTitle
 				}
-				
-				
+
+
 				return this.redis.set(String(ctx.params.id), JSON.stringify(user));
 			}
 		}, // END OF UPDATE ACTION
@@ -145,9 +146,15 @@ module.exports = {
 			}
 		}, // END OF REMOVE ACTION
 
-		async list(){
-			let sortedList = await this.redis.keys('*');			
-			return sortedList.sort();
+		list() {
+			const nameList = [];
+			client.keys("contact_*").then(keys => {
+				keys.forEach(function (key) {
+					client.get(key, (err, value) => {
+						nameList.push(value);
+					});
+				});
+			});
 		}
 	},
 

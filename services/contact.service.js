@@ -104,19 +104,24 @@ module.exports = {
 			},
 			async handler(ctx) {
 				let { id, fullName, email, phone, walletsTitle } = ctx.params;
-				let user = JSON.parse(
-				this.Promise.resolve(id)
-					.then(contact => this.adapter.findById(String(id)))
-				);
+				let user = await this.Promise.resolve(id)
+				.then(contact => this.adapter.findById(String(id)))
+				
+				console.log("INFO: " + (user));
+				
+			
 
-				user = {
-					...user,
-					email: email,
-					fullName: fullName,
-					phone: phone,
-					title: walletsTitle
-				}
-
+					user = {
+						...user,
+						email: email,
+						fullName: fullName,
+						phone: phone
+						/*,
+						wallets: {
+							title: walletsTitle
+						}*/
+					}
+					
 				return this.Promise.resolve(id)
 					.then(contact => this.adapter.updateById(String(id), user))
 			}

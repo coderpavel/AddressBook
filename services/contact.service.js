@@ -35,7 +35,7 @@ module.exports = {
 				}
 			},
 			handler(ctx) {
-				const {id} = ctx.params;
+				const { id } = ctx.params;
 				return this.Promise.resolve(id)
 					.then(contact => this.adapter.findById(String(id)))
 			}
@@ -102,28 +102,42 @@ module.exports = {
 					empty: false
 				}
 			},
-			async handler(ctx) {
+			handler(ctx) {
 				let { id, fullName, email, phone, walletsTitle } = ctx.params;
-				let user = await this.Promise.resolve(id)
-				.then(contact => this.adapter.findById(String(id)))
-				
-				console.log("INFO: " + (user));
-				
-			
 
-					user = {
-						...user,
-						email: email,
-						fullName: fullName,
-						phone: phone
-						/*,
-						wallets: {
-							title: walletsTitle
+
+				const getUser = () => new Promise(resolve => resolve(this.adapter.findById(String(id)))); 
+				// Почему цепочкой без getUser() не пашет
+				getUser().then(userFromDb => {
+					return new Promise((resolve) => {
+
+							userFromDb.email = email,
+							userFromDb.fullName = fullName,
+							userFromDb.phone = phone
+							userFromDb.wallets.title = walletsTitle // не заносит
+						
+						// Q: Вот так не получается и с ... тоже не получилось
+						/* 
+						let userToEdit = userFromDb;
+						userToEdit = { 
+							email: email,
+							fullName: fullName,
+							phone: phone
 						}*/
-					}
-					
-				return this.Promise.resolve(id)
-					.then(contact => this.adapter.updateById(String(id), user))
+						resolve(userFromDb);
+					})
+				}).then(userEdited => {
+					console.log(userEdited)
+					this.adapter.updateById(String(id), userEdited)
+				});
+
+
+
+
+
+
+
+
 			}
 		}, // END OF UPDATE ACTION
 
@@ -135,21 +149,14 @@ module.exports = {
 				}
 			},
 			async handler(ctx) {
-				const { id } = ctx.params; 
+				const { id } = ctx.params;
 				return this.Promise.resolve(id)
 					.then(contact => this.adapter.removeById(String(id)))
 			}
 		}, // END OF REMOVE ACTION
 
 		list() {
-			const nameList = [];
-			client.keys("contact_*").then(keys => {
-				keys.forEach(function (key) {
-					client.get(key, (err, value) => {
-						nameList.push(value);
-					});
-				});
-			});
+			return this.adapter.find();
 		}
 	},
 

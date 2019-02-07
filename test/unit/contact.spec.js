@@ -2,32 +2,34 @@
 
 const { ServiceBroker } = require("moleculer");
 const { ValidationError } = require("moleculer").Errors;
-const TestService = require("../../services/greeter.service");
+//const TestService = require("../../services/greeter.service");
+const TestService = require("../../services/contact.service");
 
 describe("Test 'contact' service", () => {
 	let broker = new ServiceBroker();
-	const service = broker.createService(TestService, { database: "unit-test" });
+	const service = broker.createService(TestService, { database: "unit_test" });
 	const r = service.adapter.getR();
 
+	const objTest = {
+		id: "1",
+		fullName: "Pavel",
+		email: "9243031@gmail.com",
+		phone: "+998909243031",
+		wallets: {
+			title: "XRP",
+			currency: "Ripple",
+			address: "555888222"
+		}
+	};
 
 
 	beforeAll(() => broker.start().then(() => {
-		return service.adapter.insert({
-			id: "1",
-			fullName: "Pavel",
-			email: "9243031@gmail.com",
-			phone: "+998909243031",
-			wallets: {
-				title: "XRP",
-				currency: "Ripple",
-				address: "555888222"
-			}
-		});
+		return service.adapter.insert(objTest);
 	}));
 
 	afterAll(() => {
-		r.dbDrop("unit-test").run(service.client);
-		broker.stop();
+		return r.dbDrop("unit_test").run(service.client)
+		.then(() =>  broker.stop());
 	});
 	/***************************************************************************************/
 	describe("get an entity", () => {
@@ -35,31 +37,11 @@ describe("Test 'contact' service", () => {
 		//async 
 		it("should return Entity with name Pavel", () => {
 			//result = await this.adapter.findById("1");
-			expect(broker.call("contact.get").resolves.toMatchObject({
-				id: "1",
-				fullName: "Pavel",
-				email: "9243031@gmail.com",
-				phone: "+998909243031",
-				wallets: {
-					title: "XRP",
-					currency: "Ripple",
-					address: "555888222"
-				});
+			expect(broker.call("contact.get")).resolves.toEqual(objTest);
 		});
 
 	});
 
-	describe("Test 'greeter.welcome' action", () => {
-
-		it("should return with 'Welcome'", () => {
-			expect(broker.call("greeter.welcome", { name: "Adam" })).resolves.toBe("Welcome, Adam");
-		});
-
-		it("should reject an ValidationError", () => {
-			expect(broker.call("greeter.welcome")).rejects.toBeInstanceOf(ValidationError);
-		});
-
-	});
 
 });
 

@@ -145,7 +145,7 @@ module.exports = {
 	/**
 	 * Events
 	 */
-	events: {
+	events:	 {
 		"contact.create"([fullName, email, phone, wallets]) {
 
 			wallets.address = this.broker.emit("wallet.create", wallets);

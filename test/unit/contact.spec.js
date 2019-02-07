@@ -2,7 +2,6 @@
 
 const { ServiceBroker } = require("moleculer");
 const { ValidationError } = require("moleculer").Errors;
-//const TestService = require("../../services/greeter.service");
 const TestService = require("../../services/contact.service");
 
 describe("Test 'contact' service", () => {
@@ -11,7 +10,6 @@ describe("Test 'contact' service", () => {
 	const r = service.adapter.getR();
 
 	const objTest = {
-		id: "1",
 		fullName: "Pavel",
 		email: "9243031@gmail.com",
 		phone: "+998909243031",
@@ -23,23 +21,59 @@ describe("Test 'contact' service", () => {
 	};
 
 
+	beforeAll(() => broker.start());
+	/*	
 	beforeAll(() => broker.start().then(() => {
 		return service.adapter.insert(objTest);
-	}));
+	})
+		.then((obj) => {
+			objTest.id = obj.id;
+		})
+	);
+	*/
 
 	afterAll(() => {
-		return r.dbDrop("unit_test").run(service.client)
-		.then(() =>  broker.stop());
+		return r.dbDrop(service.database).run(service.client)
+			.then(() => broker.stop());
 	});
-	/***************************************************************************************/
-	describe("get an entity", () => {
 
-		//async 
-		it("should return Entity with name Pavel", () => {
-			//result = await this.adapter.findById("1");
-			expect(broker.call("contact.get")).resolves.toEqual(objTest);
+	/**************************************** CREATE ***********************************************/
+
+/*	describe("create a contact", () => {
+		it("should create a contact", () => {
+			expect(broker.call("contact.create", objTest)).then(obj => {
+				objTest.id = obj.id;
+			}).resolves.toEqual(objTest);
+		}); // end of it
+	});
+*/
+	/****************************************** GET *********************************************/
+	describe("get a contact object", () => {
+		it("should return contact object", () => {
+			expect(broker.call("contact.get", { id: objTest.id })).resolves.toEqual(objTest);
 		});
 
+	});
+
+	/******************************************  UPDATE  *********************************************/
+
+	describe("update a contact", () => {
+		it("should update a contact", () => {
+
+			objTest.fullName = "Alex";
+			broker.call("contact.update", objTest).then(newObj =>
+				expect(broker.call("contact.get", { id: objTest.id })).resolves.toEqual(newObj) 
+			);
+		}); // end of it
+	});
+
+
+	/******************************************  REMOVE  *********************************************/
+
+	describe("remove a contact", () => {
+		it("should remove a contact", () => {
+			expect(broker.call("contact.remove", objTest)).resolves.toEqual({id: objTest.id});  
+		}); // end of it
 	});
 
 

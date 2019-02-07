@@ -8,12 +8,15 @@ describe("Test 'greeter' service", () => {
 	let broker = new ServiceBroker();
 	broker.createService(TestService);
 
-	beforeAll(() => broker.start());
+	beforeAll(() => broker.start(
+
+	));
 	afterAll(() => broker.stop());
 
 	describe("Test 'greeter.hello' action", () => {
 
 		it("should return with 'Hello Moleculer'", () => {
+			
 			expect(broker.call("greeter.hello")).resolves.toBe("Hello Moleculer");
 		});
 

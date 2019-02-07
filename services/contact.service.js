@@ -106,37 +106,19 @@ module.exports = {
 				let { id, fullName, email, phone, walletsTitle } = ctx.params;
 
 
-				const getUser = () => new Promise(resolve => resolve(this.adapter.findById(String(id)))); 
-				// Почему цепочкой без getUser() не пашет
-				getUser().then(userFromDb => {
+				this.adapter.findById(String(id)).then(userFromDb => {
 					return new Promise((resolve) => {
-
+						// Q: Вот так ...  не получилось,заполнить объект
 							userFromDb.email = email,
 							userFromDb.fullName = fullName,
 							userFromDb.phone = phone
-							userFromDb.wallets.title = walletsTitle // не заносит
-						
-						// Q: Вот так не получается и с ... тоже не получилось
-						/* 
-						let userToEdit = userFromDb;
-						userToEdit = { 
-							email: email,
-							fullName: fullName,
-							phone: phone
-						}*/
+							userFromDb.wallets[0].title = walletsTitle // не заносит
 						resolve(userFromDb);
 					})
 				}).then(userEdited => {
 					console.log(userEdited)
 					this.adapter.updateById(String(id), userEdited)
 				});
-
-
-
-
-
-
-
 
 			}
 		}, // END OF UPDATE ACTION
@@ -164,12 +146,12 @@ module.exports = {
 	 * Events
 	 */
 	events: {
-		"contact.create"([id, fullName, email, phone, wallets]) {
+		"contact.create"([fullName, email, phone, wallets]) {
 
 			wallets.address = this.broker.emit("wallet.create", wallets);
 			const newContact = {
 				fullName: fullName,
-				email: email,
+				email: email,	
 				phone: phone,
 				wallets: wallets
 			}
@@ -197,6 +179,7 @@ module.exports = {
 	 * Methods
 	 */
 	methods: {
+
 
 
 	},

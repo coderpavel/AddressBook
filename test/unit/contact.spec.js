@@ -61,9 +61,12 @@ describe("Test 'contact' service", () => {
 
 	describe("update a contact", () => {
 		it("should update a contact", () => {
-			objTest.fullName = "Alex2";
-			return broker.call("contact.update", objTest).then(objTest => {
-				return broker.call("contact.get", { id: objTest.id }).then(res => {
+			objTest.fullName = "Alex3";
+			return broker.call("contact.update", objTest).then(result => {
+				return broker.call("contact.get", { id: result.id }).then(res => {
+					console.log("1- : ", res);
+					console.log("*****************************************************************");
+					console.log("2- : ",objTest);
 					expect(res).toEqual(objTest);
 				});
 			});

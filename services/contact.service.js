@@ -142,7 +142,6 @@ module.exports = {
 							address: "555888222"
 						}]
 					};
-					console.log(userEdited)
 					this.adapter.updateById(String(id), userEdited)
 				});
 

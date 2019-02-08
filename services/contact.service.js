@@ -75,7 +75,7 @@ module.exports = {
 			handler(ctx) {
 				const { fullName, email, phone, wallets } = ctx.params;
 				const id = 'contact_' + uuidv4();
-				return this.broker.emit("contact.create", [id, fullName, email, phone, wallets]);
+				return this.broker.emit("contact.create", [fullName, email, phone, wallets]);
 			}
 		}, // END OF CREATE ACTION
 
@@ -83,39 +83,65 @@ module.exports = {
 			params: {
 				id: {
 					type: "string",
-					empty: false
+					empty: true
 				},
 				fullName: {
 					type: "string",
-					empty: false
+					empty: true
 				},
 				email: {
 					type: "string",
-					empty: false
+					empty: true
 				},
 				phone: {
 					type: "string",
-					empty: false
+					empty: true
 				},
-				walletsTitle: {
-					type: "string",
-					empty: false
+				wallets: {
+					type: "array", items: "object", props: {
+						title: {
+							type: "string",
+							empty: false
+						},
+						currency: {
+							type: "string",
+							empty: false
+						},
+						address: {
+							type: "string",
+							empty: true
+						}
+					}
 				}
 			},
 			handler(ctx) {
-				let { id, fullName, email, phone, walletsTitle } = ctx.params;
+				let { id, fullName, email, phone, wallets } = ctx.params;
 
 
 				this.adapter.findById(String(id)).then(userFromDb => {
 					return new Promise((resolve) => {
 						// Q: Вот так ...  не получилось,заполнить объект
-							userFromDb.email = email,
-							userFromDb.fullName = fullName,
-							userFromDb.phone = phone
-							userFromDb.wallets[0].title = walletsTitle // не заносит
+						userFromDb.email = email,
+						userFromDb.fullName = fullName,
+						userFromDb.phone = phone
+						userFromDb.wallets[0].title = wallets[0].title
+						userFromDb.wallets[0].currency = wallets[0].currency
+						userFromDb.wallets[0].address = wallets[0].address
 						resolve(userFromDb);
 					})
 				}).then(userEdited => {
+
+
+					const objTest = {
+						fullName: "Pavel",
+						email: "9243031@gmail.com",
+						phone: "+998909243031",
+						wallets: [{
+							title: "XRP",
+							currency: "Ripple",
+							address: "555888222"
+						}]
+					};
 					console.log(userEdited)
 					this.adapter.updateById(String(id), userEdited)
 				});
@@ -145,13 +171,13 @@ module.exports = {
 	/**
 	 * Events
 	 */
-	events:	 {
+	events: {
 		"contact.create"([fullName, email, phone, wallets]) {
 
 			wallets.address = this.broker.emit("wallet.create", wallets);
 			const newContact = {
 				fullName: fullName,
-				email: email,	
+				email: email,
 				phone: phone,
 				wallets: wallets
 			}

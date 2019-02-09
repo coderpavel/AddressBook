@@ -74,7 +74,7 @@ module.exports = {
 			},
 			handler(ctx) {
 				const { fullName, email, phone, wallets } = ctx.params;
-				const id = 'contact_' + uuidv4();
+				//const id = 'contact_' + uuidv4();
 				return this.broker.emit("contact.create", [fullName, email, phone, wallets]);
 			}
 		}, // END OF CREATE ACTION
@@ -118,12 +118,12 @@ module.exports = {
 				let { id, fullName, email, phone, wallets } = ctx.params;
 
 
-				this.adapter.findById(String(id)).then(userFromDb => {
+				return this.adapter.findById(String(id)).then(userFromDb => {
 					return new Promise((resolve) => {
 						// Q: Вот так ...  не получилось,заполнить объект
 						userFromDb.email = email,
-						userFromDb.fullName = fullName,
-						userFromDb.phone = phone
+							userFromDb.fullName = fullName,
+							userFromDb.phone = phone
 						userFromDb.wallets[0].title = wallets[0].title
 						userFromDb.wallets[0].currency = wallets[0].currency
 						userFromDb.wallets[0].address = wallets[0].address
@@ -142,7 +142,7 @@ module.exports = {
 							address: "555888222"
 						}]
 					};
-					this.adapter.updateById(String(id), userEdited)
+					return this.adapter.updateById(String(id), userEdited)
 				});
 
 			}
@@ -180,8 +180,20 @@ module.exports = {
 				phone: phone,
 				wallets: wallets
 			}
+			/*
 			return this.Promise.resolve(newContact)
-				.then(contact => this.adapter.insert(newContact))
+				.then(() => { return this.adapter.insert(newContact)})*/
+
+			return this.Promise.resolve(newContact)
+				.then(() => {
+					return new Promise(resolve =>
+						resolve(this.adapter.insert(newContact))
+					)
+				}).then(result => {
+					return result;
+				});
+
+
 		},
 		"wallet.create"(wallets) {
 
@@ -195,6 +207,7 @@ module.exports = {
 						wallets[i].address = "XRP_" + uuidv4();
 						break;
 					default:
+						break;
 				}
 			} // For End
 		}

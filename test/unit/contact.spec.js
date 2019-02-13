@@ -14,7 +14,7 @@ describe("Test 'contact' service", () => {
 		email: "9243031@gmail.com",
 		phone: "+998909243031",
 		wallets: [{
-			title: "XRP2",
+			title: "ETH",
 			currency: "Ripple",
 			address: "555888222"
 		}]
@@ -32,33 +32,32 @@ describe("Test 'contact' service", () => {
 	);
 
 	afterAll(() => {
-		return r.dbDrop(service.database).run(service.client)
-			.then(() => broker.stop());
+	//	return r.dbDrop(service.database).run(service.client)
+		//	.then(() => broker.stop());
 	});
 
 	/**************************************** CREATE ***********************************************/
-	
-		describe("create a contact", () => {
-			it("should create a contact", () => {
-				const objCreate = {
-					fullName: "Pavel",
-					email: "9243031@gmail.com",
-					phone: "+998909243031",
-					wallets: [{
-						title: "XRP2",
-						currency: "Ripple",
-						address: "555888222"
-					}]
-				};
-				return broker.call("contact.create", objCreate).then(obj => {
-					// RETURN УЖЕ везде поставил) А он всё undefined
-					console.log(obj + "**************************************");
-					objCreate.id = obj.id;
-					expect(obj).toEqual(objCreate);
-				});
-			}); // end of it
-		});
-	
+
+	describe("create a contact", () => {
+		it("should create a contact", () => {
+			const objCreate = {
+				fullName: "ALEX",
+				email: "9243031@gmail.com",
+				phone: "+998909243031",
+				wallets: [{
+					title: "ETH",
+					currency: "Ripple",
+					address: "555888222"
+				}]
+			};
+			return broker.call("contact.create", objCreate).then(obj => {
+				objCreate.id = obj.id;
+				console.log(obj);
+				expect(obj).toEqual(objCreate);
+			});
+		}); // end of it
+	});
+
 	/****************************************** GET *********************************************/
 	describe("get a contact object", () => {
 		it("GET should return contact object", () => {
@@ -66,30 +65,29 @@ describe("Test 'contact' service", () => {
 				expect(res).toEqual(objTest);
 			});
 		});
-   
-	});
 
+	});
 	/******************************************  UPDATE  *********************************************/
 
 	describe("update a contact", () => {
 
-		it("should check ID param for update", () => {
-			const PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-			expect(PATTERN.test(objTest.id) && typeof (objTest.id) === 'string').toBe(true);
-		});
+		// it("should check ID param for update", () => {
+		// 	const PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		// 	expect(PATTERN.test(objTest.id) && typeof (objTest.id) === 'string').toBe(true);
+		// });
 
-		it("should check fullname params for update", () => {
-			expect(typeof (objTest.fullName) === 'string').toBe(true);
-		});
+		// it("should check fullname params for update", () => {
+		// 	expect(typeof (objTest.fullName) === 'string').toBe(true);
+		// });
 
-		it("should check fullname, email params for update", () => {
-			const PATTERN = /.*@.*/;
-			expect(PATTERN.test(objTest.email) && typeof (objTest.email) === 'string').toBe(true);
-		});
+		// it("should check fullname, email params for update", () => {
+		// 	const PATTERN = /.*@.*/;
+		// 	expect(PATTERN.test(objTest.email) && typeof (objTest.email) === 'string').toBe(true);
+		// });
 
-		it("should check phone params for update", () => {
-			expect(typeof (objTest.phone) === 'string').toBe(true);
-		});
+		// it("should check phone params for update", () => {
+		// 	expect(typeof (objTest.phone) === 'string').toBe(true);
+		// });
 
 
 		it("should update a contact", () => {
@@ -102,8 +100,26 @@ describe("Test 'contact' service", () => {
 		});
 	}); // end of it
 
-	/******************************************  REMOVE  *********************************************/
 
+	/******************************************  Check Wallet  *********************************************/
+/*
+	describe("Check wallet", () => {
+		it("should create Wallets", () => {
+			const PATTERN = /^ETH_[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+			return broker.call("contact.get", { id: objTest.id }).then(res => {
+				console.log("*********************** RESULT ***********************");
+				console.log(PATTERN.test(res.wallets[0].address));
+				console.log(res.wallets[0].address);
+				
+				setTimeout(expect(PATTERN.test(res.wallets[0].address)).toBe(true), 25000);
+				
+			});
+		});
+	});
+
+*/
+	/******************************************  REMOVE  *********************************************/
+/*
 	describe("remove a contact", () => {
 		it("should remove a contact", () => {
 			return broker.call("contact.remove", objTest).then(res => {
@@ -111,7 +127,7 @@ describe("Test 'contact' service", () => {
 			});
 		}); // end of it
 	});
-
+*/
 
 
 });

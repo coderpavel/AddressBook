@@ -1,26 +1,41 @@
-"use strict";
+	"use strict";
 //const Redis = require('ioredis');
 //const client = Redis.createClient();
 const DbService = require("moleculer-db");
 const RethinkDBAdapter = require("moleculer-db-adapter-rethinkdb");
 let r = require("rethinkdb");
 const uuidv4 = require('uuid/v4');
+const QueueService = require("moleculer-bull");
 
 module.exports = {
 	name: "contact",
 
-	mixins: [DbService],
+	mixins: [DbService, QueueService()],
 	adapter: new RethinkDBAdapter(),
 	database: "posts",
 	table: "posts",
 	settings: {
 		fields: ["id", "name"]
 	},
+	
 
 	/**
 	 * Service dependencies
 	 */
 	dependencies: [],
+
+	queues: {
+		"wallet.create"(job) {
+			this.logger.info("New job received!", job.data);
+			job.progress(10);
+
+			return this.Promise.resolve({
+				done: true,
+				id: job.data.id,
+				worker: process.pid
+			});
+		}
+	},
 
 	/**
 	 * Actions
@@ -72,10 +87,41 @@ module.exports = {
 					}
 				}
 			},
-			handler(ctx) {
-				const { fullName, email, phone, wallets } = ctx.params;
-				//const id = 'contact_' + uuidv4();
-				return this.broker.emit("contact.create", [fullName, email, phone, wallets]);
+			async handler(ctx) {
+				// const { fullName, email, phone, wallets } = ctx.params;
+
+				const newContact = {
+					fullName: ctx.params.fullName,
+					email: ctx.params.email,
+					phone: ctx.params.phone,
+					wallets: ctx.params.wallets
+				}
+
+				/*
+				const contactInserted = await this.adapter.insert(newContact);
+				console.log("******** => : " + (contactInserted));
+
+				const walletCreated = await this.broker.emit("wallet.create", contactInserted);
+				console.log("******** => : " + (walletCreated));
+				return walletCreated;
+*/
+				/*
+								let promise = new Promise((resolve) => {
+									resolve(this.adapter.insert(newContact))
+								}).then(contact => {
+									this.broker.emit("wallet.create", contact);
+								});
+								console.log(promise);
+								return promise;
+								*/
+
+				
+					return this.adapter.insert(newContact).then(contact => {
+						this.broker.emit("wallet.create", contact);
+						return contact;
+					});
+				
+
 			}
 		}, // END OF CREATE ACTION
 
@@ -130,8 +176,6 @@ module.exports = {
 						resolve(userFromDb);
 					})
 				}).then(userEdited => {
-
-
 					const objTest = {
 						fullName: "Pavel",
 						email: "9243031@gmail.com",
@@ -171,40 +215,20 @@ module.exports = {
 	 * Events
 	 */
 	events: {
-		"contact.create"([fullName, email, phone, wallets]) {
-
-			wallets.address = this.broker.emit("wallet.create", wallets);
-			const newContact = {
-				fullName: fullName,
-				email: email,
-				phone: phone,
-				wallets: wallets
-			}
-			/*
-			return this.Promise.resolve(newContact)
-				.then(() => { return this.adapter.insert(newContact)})*/
-
-			return this.Promise.resolve(newContact)
-				.then(() => {
-					return new Promise(resolve =>
-						resolve(this.adapter.insert(newContact))
-					)
-				}).then(result => {
-					return result;
-				});
-
-
-		},
-		"wallet.create"(wallets) {
-
-			for (let i = 0; wallets.length > i; i++) {
-
-				switch (wallets[i].currency) {
+		"wallet.create"(newContact) {
+			for (let i = 0; newContact.wallets.length > i; i++) {
+				switch (newContact.wallets[i].currency) {
 					case "BTC":
-						wallets[i].address = "BTC_" + uuidv4();
+						newContact.wallets[i].address = "BTC_" + uuidv4();
+						this.adapter.updateById(String(newContact.id), newContact).then(walletCreated => {
+							return walletCreated;
+						});
 						break;
-					case "XRP":
-						wallets[i].address = "XRP_" + uuidv4();
+					case "ETH":
+						newContact.wallets[i].address = "ETH_" + uuidv4();
+						this.adapter.updateById(String(newContact.id), newContact).then(walletCreated => {
+							return walletCreated;
+						});
 						break;
 					default:
 						break;

@@ -1,9 +1,8 @@
 "use strict";
-//const Redis = require('ioredis');
-//const client = Redis.createClient();
+const Redis = require('ioredis');
 const DbService = require("moleculer-db");
 const RethinkDBAdapter = require("moleculer-db-adapter-rethinkdb");
-let r = require("rethinkdb");
+//let r = require("rethinkdb");
 const uuidv4 = require('uuid/v4');
 const QueueService = require("moleculer-bull");
 const mailgun = require('mailgun-js')({ apiKey: "key-125dab0e857c04733b1f55f584eb41a3", domain: 'sandbox0b1f9b3711484f89a71c2e284e0e9221.mailgun.org' });
@@ -12,14 +11,6 @@ module.exports = {
 	name: "contact",
 
 	mixins: [DbService, QueueService()],
-	adapter: new RethinkDBAdapter(),
-	database: "posts",
-	table: "posts",
-	settings: {
-		fields: ["id", "name"],
-
-	},
-
 
 	/**
 	 * Service dependencies
@@ -35,11 +26,13 @@ module.exports = {
 					switch (newContact.wallets[i].currency) {
 						case "BTC":
 							newContact.wallets[i].address = "BTC_" + uuidv4();
-							await this.adapter.updateById(String(newContact.id), newContact);
+							// await this.adapter.updateById(String(newContact.id), newContact);
+							this.redis.set(String(newContact.id), JSON.stringify(newContact));
 							break;
 						case "ETH":
 							newContact.wallets[i].address = "ETH_" + uuidv4();
-							await this.adapter.updateById(String(newContact.id), newContact);
+							// await this.adapter.updateById(String(newContact.id), newContact);
+							this.redis.set(String(newContact.id), JSON.stringify(newContact));
 							break;
 						default:
 							break;
@@ -54,12 +47,13 @@ module.exports = {
 					wallets: newContact.wallets
 				});
 
+
 			});
 
 		},
 
 
-/*
+
 		"email.send"(job) {
 			let newContact = job.data;
 			// send
@@ -72,7 +66,7 @@ module.exports = {
 				this.logger.info(body);
 				return Promise.resolve({ done: true, id: job.id });
 			});
-		}*/
+		}
 	},
 
 	/**
@@ -84,13 +78,15 @@ module.exports = {
 			params: {
 				id: {
 					type: "string",
-					pattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+					//pattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 				}
 			},
 			handler(ctx) {
-				const { id } = ctx.params;
-				return this.Promise.resolve(id)
-					.then(contact => this.adapter.findById(String(id)))
+
+				return this.redis.get(String(ctx.params.id)).then(contact => {
+					console.log(JSON.parse(contact));
+				});
+
 			}
 		},// END OF GET ACTION
 
@@ -126,53 +122,38 @@ module.exports = {
 				}
 			},
 			async handler(ctx) {
-				// const { fullName, email, phone, wallets } = ctx.params;
 
 				const newContact = {
+					id: uuidv4(),
 					fullName: ctx.params.fullName,
 					email: ctx.params.email,
 					phone: ctx.params.phone,
 					wallets: ctx.params.wallets
 				}
 
-				/*
-				const contactInserted = await this.adapter.insert(newContact);
-				console.log("******** => : " + (contactInserted));
-	
-				const walletCreated = await this.broker.emit("wallet.create", contactInserted);
-				console.log("******** => : " + (walletCreated));
-				return walletCreated;
-*/
-				/*
-								let promise = new Promise((resolve) => {
-									resolve(this.adapter.insert(newContact))
-								}).then(contact => {
-									this.broker.emit("wallet.create", contact);
-								});
-								console.log(promise);
-								return promise;
-								*/
-
-
-				return this.adapter.insert(newContact).then(contact => {
-					//this.broker.emit("wallet.create", contact);
-					this.getQueue("wallet.create").on("global:completed", (job, res) => {
-						this.logger.info(`Job #${job.id} completed!. Result:`, res);
-					});
-
-					this.getQueue("email.send").on("global:completed", (job, res) => {
-						this.logger.info(`EMAIL has been sent!. Result:`, res);
-					});
-
-					this.createJob("wallet.create", contact);
-
-					// Send
-					this.createJob("email.send", contact);
-
-					this.getQueue("email.send").getJobCounts().then(res => this.logger.info(res));
-
-					return contact;
+				this.redis.set(newContact.id, JSON.stringify(newContact)).then(contactStatus => {
+					console.log(newContact);
+					return contactStatus;
 				});
+
+				// .then(contact => {
+				// 	this.getQueue("wallet.create").on("global:completed", (job, res) => {
+				// 		this.logger.info(`Job #${job.id} completed!. Result:`, res);
+				// 	});
+
+				// 	this.getQueue("email.send").on("global:completed", (job, res) => {
+				// 		this.logger.info(`EMAIL has been sent!. Result:`, res);
+				// 	});
+
+				// 	this.createJob("wallet.create", contact);
+
+				// 	// Send
+				// 	this.createJob("email.send", contact);
+
+				// 	this.getQueue("email.send").getJobCounts().then(res => this.logger.info(res));
+
+				// 	return contact;
+				// });
 
 			}
 		}, // END OF CREATE ACTION
@@ -212,35 +193,47 @@ module.exports = {
 					}
 				}
 			},
-			handler(ctx) {
-				let { id, fullName, email, phone, wallets } = ctx.params;
+			async handler(ctx) {
+
+				console.log("boooooooooooo***************************");
 
 
-				return this.adapter.findById(String(id)).then(userFromDb => {
+				let { id, fullName, email, phone } = ctx.params;
+				let user = await this.redis.get(String(id));
+				
+				// user.fullName = fullName;
+				// user.email = email;
+				// user.phone = phone;
+
+				user = {
+					fullName: fullName,
+					email: email,
+					phone: phone
+
+				}
+
+				console.log(user.fullName);
+				
+				this.redis.set(String(id), JSON.stringify(user)).then(contact => {
+					console.log(user);
+					return contact;
+				});
+
+
+				/*
+				let { id, fullName, email, phone } = ctx.params;
+
+				return this.redis.get(String(id)).then(userFromDb => {
 					return new Promise((resolve) => {
-						// Q: Вот так ...  не получилось,заполнить объект
 						userFromDb.email = email,
 							userFromDb.fullName = fullName,
 							userFromDb.phone = phone
-						userFromDb.wallets[0].title = wallets[0].title
-						userFromDb.wallets[0].currency = wallets[0].currency
-						userFromDb.wallets[0].address = wallets[0].address
 						resolve(userFromDb);
 					})
 				}).then(userEdited => {
-					const objTest = {
-						fullName: "Pavel",
-						email: "9243031@gmail.com",
-						phone: "+998909243031",
-						wallets: [{
-							title: "XRP",
-							currency: "Ripple",
-							address: "555888222"
-						}]
-					};
-					return this.adapter.updateById(String(id), userEdited)
+					this.redis.set(String(id), userEdited)
 				});
-
+*/
 			}
 		}, // END OF UPDATE ACTION
 
@@ -251,10 +244,8 @@ module.exports = {
 					empty: false
 				}
 			},
-			async handler(ctx) {
-				const { id } = ctx.params;
-				return this.Promise.resolve(id)
-					.then(contact => this.adapter.removeById(String(id)))
+			handler(ctx) {
+				this.redis.del(String(ctx.params.id));
 			}
 		}, // END OF REMOVE ACTION
 
@@ -283,7 +274,7 @@ module.exports = {
 	 * Service created lifecycle event handler
 	 */
 	async created() {
-		//this.redis = await new Redis();
+		this.redis = await new Redis();
 	},
 	/**
 	 * Service started lifecycle event handler

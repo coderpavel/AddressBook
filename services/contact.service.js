@@ -130,7 +130,7 @@ module.exports = {
 				}
 
 				this.redis.set(newContact.id, JSON.stringify(newContact))
-					// .then(contactStatus => {
+					//  .then(contactStatus => {
 					// 	console.log(contactStatus);
 					// 	return contactStatus;
 					// });

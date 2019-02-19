@@ -26,12 +26,10 @@ module.exports = {
 					switch (newContact.wallets[i].currency) {
 						case "BTC":
 							newContact.wallets[i].address = "BTC_" + uuidv4();
-							// await this.adapter.updateById(String(newContact.id), newContact);
 							this.redis.set(String(newContact.id), JSON.stringify(newContact));
 							break;
 						case "ETH":
 							newContact.wallets[i].address = "ETH_" + uuidv4();
-							// await this.adapter.updateById(String(newContact.id), newContact);
 							this.redis.set(String(newContact.id), JSON.stringify(newContact));
 							break;
 						default:
@@ -39,6 +37,7 @@ module.exports = {
 					}
 				}
 
+				// wallet.created откуда и куда?
 				this.broker.emit("wallet.created", newContact);
 
 				resolve({
@@ -51,7 +50,6 @@ module.exports = {
 			});
 
 		},
-
 
 
 		"email.send"(job) {
@@ -78,13 +76,13 @@ module.exports = {
 			params: {
 				id: {
 					type: "string",
-					//pattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+					pattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 				}
 			},
 			handler(ctx) {
-
 				return this.redis.get(String(ctx.params.id)).then(contact => {
-					console.log(JSON.parse(contact));
+					console.log(contact);
+					return contact;
 				});
 
 			}
@@ -131,29 +129,31 @@ module.exports = {
 					wallets: ctx.params.wallets
 				}
 
-				this.redis.set(newContact.id, JSON.stringify(newContact)).then(contactStatus => {
-					console.log(newContact);
-					return contactStatus;
-				});
+				this.redis.set(newContact.id, JSON.stringify(newContact))
+					// .then(contactStatus => {
+					// 	console.log(contactStatus);
+					// 	return contactStatus;
+					// });
+				
+					.then(contact => {
+						this.getQueue("wallet.create").on("global:completed", (job, res) => {
+							this.logger.info(`Job #${job.id} completed!. Result:`, res);
+						});
 
-				// .then(contact => {
-				// 	this.getQueue("wallet.create").on("global:completed", (job, res) => {
-				// 		this.logger.info(`Job #${job.id} completed!. Result:`, res);
-				// 	});
+						this.getQueue("email.send").on("global:completed", (job, res) => {
+							this.logger.info(`EMAIL has been sent!. Result:`, res);
+						});
 
-				// 	this.getQueue("email.send").on("global:completed", (job, res) => {
-				// 		this.logger.info(`EMAIL has been sent!. Result:`, res);
-				// 	});
+						this.createJob("wallet.create", contact);
 
-				// 	this.createJob("wallet.create", contact);
+						// Send
+						this.createJob("email.send", contact);
 
-				// 	// Send
-				// 	this.createJob("email.send", contact);
+						this.getQueue("email.send").getJobCounts().then(res => this.logger.info(res));
 
-				// 	this.getQueue("email.send").getJobCounts().then(res => this.logger.info(res));
-
-				// 	return contact;
-				// });
+						return contact;
+					});
+				
 
 			}
 		}, // END OF CREATE ACTION
@@ -195,15 +195,8 @@ module.exports = {
 			},
 			async handler(ctx) {
 
-				console.log("boooooooooooo***************************");
-
-
 				let { id, fullName, email, phone } = ctx.params;
 				let user = await this.redis.get(String(id));
-				
-				// user.fullName = fullName;
-				// user.email = email;
-				// user.phone = phone;
 
 				user = {
 					fullName: fullName,
@@ -212,28 +205,8 @@ module.exports = {
 
 				}
 
-				console.log(user.fullName);
-				
-				this.redis.set(String(id), JSON.stringify(user)).then(contact => {
-					console.log(user);
-					return contact;
-				});
+				return this.redis.set(String(id), JSON.stringify(user));
 
-
-				/*
-				let { id, fullName, email, phone } = ctx.params;
-
-				return this.redis.get(String(id)).then(userFromDb => {
-					return new Promise((resolve) => {
-						userFromDb.email = email,
-							userFromDb.fullName = fullName,
-							userFromDb.phone = phone
-						resolve(userFromDb);
-					})
-				}).then(userEdited => {
-					this.redis.set(String(id), userEdited)
-				});
-*/
 			}
 		}, // END OF UPDATE ACTION
 

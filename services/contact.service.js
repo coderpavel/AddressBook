@@ -1,4 +1,4 @@
-	"use strict";
+"use strict";
 //const Redis = require('ioredis');
 //const client = Redis.createClient();
 const DbService = require("moleculer-db");
@@ -6,6 +6,7 @@ const RethinkDBAdapter = require("moleculer-db-adapter-rethinkdb");
 let r = require("rethinkdb");
 const uuidv4 = require('uuid/v4');
 const QueueService = require("moleculer-bull");
+const mailgun = require('mailgun-js')({ apiKey: "key-125dab0e857c04733b1f55f584eb41a3", domain: 'sandbox0b1f9b3711484f89a71c2e284e0e9221.mailgun.org' });
 
 module.exports = {
 	name: "contact",
@@ -15,9 +16,10 @@ module.exports = {
 	database: "posts",
 	table: "posts",
 	settings: {
-		fields: ["id", "name"]
+		fields: ["id", "name"],
+
 	},
-	
+
 
 	/**
 	 * Service dependencies
@@ -26,15 +28,51 @@ module.exports = {
 
 	queues: {
 		"wallet.create"(job) {
-			this.logger.info("New job received!", job.data);
-			job.progress(10);
+			return new Promise(async (resolve) => {
+				let newContact = job.data;
 
-			return this.Promise.resolve({
-				done: true,
-				id: job.data.id,
-				worker: process.pid
+				for (let i = 0; newContact.wallets.length > i; i++) {
+					switch (newContact.wallets[i].currency) {
+						case "BTC":
+							newContact.wallets[i].address = "BTC_" + uuidv4();
+							await this.adapter.updateById(String(newContact.id), newContact);
+							break;
+						case "ETH":
+							newContact.wallets[i].address = "ETH_" + uuidv4();
+							await this.adapter.updateById(String(newContact.id), newContact);
+							break;
+						default:
+							break;
+					}
+				}
+
+				this.broker.emit("wallet.created", newContact);
+
+				resolve({
+					done: true,
+					id: newContact.id,
+					wallets: newContact.wallets
+				});
+
 			});
-		}
+
+		},
+
+
+/*
+		"email.send"(job) {
+			let newContact = job.data;
+			// send
+			return mailgun.messages().send({
+				from: "Contact: <postmaster@sandbox0b1f9b3711484f89a71c2e284e0e9221.mailgun.org>",
+				to: `${newContact.fullName} <${newContact.email}>`,
+				subject: 'Hello',
+				text: 'Testing some Mailgun awesomeness!'
+			}).then(body => {
+				this.logger.info(body);
+				return Promise.resolve({ done: true, id: job.id });
+			});
+		}*/
 	},
 
 	/**
@@ -100,7 +138,7 @@ module.exports = {
 				/*
 				const contactInserted = await this.adapter.insert(newContact);
 				console.log("******** => : " + (contactInserted));
-
+	
 				const walletCreated = await this.broker.emit("wallet.create", contactInserted);
 				console.log("******** => : " + (walletCreated));
 				return walletCreated;
@@ -115,12 +153,26 @@ module.exports = {
 								return promise;
 								*/
 
-				
-					return this.adapter.insert(newContact).then(contact => {
-						this.broker.emit("wallet.create", contact);
-						return contact;
+
+				return this.adapter.insert(newContact).then(contact => {
+					//this.broker.emit("wallet.create", contact);
+					this.getQueue("wallet.create").on("global:completed", (job, res) => {
+						this.logger.info(`Job #${job.id} completed!. Result:`, res);
 					});
-				
+
+					this.getQueue("email.send").on("global:completed", (job, res) => {
+						this.logger.info(`EMAIL has been sent!. Result:`, res);
+					});
+
+					this.createJob("wallet.create", contact);
+
+					// Send
+					this.createJob("email.send", contact);
+
+					this.getQueue("email.send").getJobCounts().then(res => this.logger.info(res));
+
+					return contact;
+				});
 
 			}
 		}, // END OF CREATE ACTION
@@ -215,33 +267,14 @@ module.exports = {
 	 * Events
 	 */
 	events: {
-		"wallet.create"(newContact) {
-			for (let i = 0; newContact.wallets.length > i; i++) {
-				switch (newContact.wallets[i].currency) {
-					case "BTC":
-						newContact.wallets[i].address = "BTC_" + uuidv4();
-						this.adapter.updateById(String(newContact.id), newContact).then(walletCreated => {
-							return walletCreated;
-						});
-						break;
-					case "ETH":
-						newContact.wallets[i].address = "ETH_" + uuidv4();
-						this.adapter.updateById(String(newContact.id), newContact).then(walletCreated => {
-							return walletCreated;
-						});
-						break;
-					default:
-						break;
-				}
-			} // For End
-		}
+
 	},
+
 
 	/**
 	 * Methods
 	 */
 	methods: {
-
 
 
 	},

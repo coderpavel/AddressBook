@@ -8,7 +8,10 @@
     "cli": "moleculer connect ",
     "ci": "jest --watch",
     "test": "jest --coverage",
-    "lint": "eslint services"
+    "lint": "eslint services",
+    "client-install": "npm install --prefix client",
+    "client": "npm start --prefix client",
+    "serverfront": "concurrently \"npm run server\" \"npm run client\""
   },
   "keywords": [
     "microservices",
@@ -16,19 +19,22 @@
   ],
   "author": "",
   "devDependencies": {
-    "eslint": "^5.10.0",
+    "eslint": "^5.12.0",
     "jest": "^23.6.0",
     "jest-cli": "^23.6.0",
     "moleculer-repl": "^0.5.3"
   },
   "dependencies": {
+    "concurrently": "^4.1.0",
     "ioredis": "^4.6.2",
     "lru-cache": "^5.1.1",
-    "moleculer": "~0.13.0",
+    "mailgun-js": "^0.22.0",
+    "moleculer": "~0.13.5",
     "moleculer-bull": "^0.2.3",
     "moleculer-console-tracer": "~0.2.0",
     "moleculer-db": "^0.7.7",
-    "moleculer-db-adapter-rethinkdb": "^0.2.4",
+    "moleculer-db-adapter-rethinkdb": "^0.2.9",
+    "moleculer-mail": "^1.2.1",
     "moleculer-web": "^0.8.0",
     "uuid": "^3.3.2"
   },

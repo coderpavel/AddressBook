@@ -17,7 +17,7 @@
  */
 module.exports = {
 	// Namespace of nodes to segment your nodes on the same network.
-	namespace: "",
+	namespace: "book",
 	// Unique node identifier. Must be unique in a namespace.
 	nodeID: null,
 
